@@ -8,7 +8,7 @@ from binascii import hexlify
    
 
 def parse_ethernet_header(packet):
-   print("Ethernet Header:")
+   print("\033[96mEthernet Header\033[0;0m:")
    
    ethernet_header = packet[0][0:14]
    eth_header = unpack("!6s 6s H", ethernet_header)
@@ -26,7 +26,7 @@ def parse_ethernet_header(packet):
    
    
 def parse_ip_header(packet):
-   print("\tIP header:")
+   print("\t\033[96mIP header\033[0;0m:")
    
    ipheader = packet[0][14:34]
    version_plus_header_len, TOS, total_len, identification, flag_plus_offset, TTL, protocol, header_checksum, source_ip, dest_ip = unpack("!1s1s2s2s2s1s1s2s4s4s", ipheader)
@@ -56,13 +56,13 @@ def parse_ip_header(packet):
    print()
    #figures out the protocol
    if protocol == 6:
-      print(f"\tProtocol: TCP ({protocol})")
+      print(f"\tProtocol: \033[1mTCP\033[0;0m ({protocol})")
    elif protocol == 1:
-      print(f"\tProtocol: ICMP ({protocol})")
+      print(f"\tProtocol: \033[1mICMP\033[0;0m ({protocol})")
    elif protocol == 17:
-      print(f"\tProtocol: UDP ({protocol})")
+      print(f"\tProtocol: \033[1mUDP\033[0;0m ({protocol})")
    elif protocol == 27:
-      print(f"\tProtocol: RDP ({protocol})")
+      print(f"\tProtocol: \033[1mRDP\033[0;0m ({protocol})")
    else:
       print(f"\tProtocol: {protocol} (Unknown)")
    print()
@@ -73,7 +73,7 @@ def parse_ip_header(packet):
 
 
 def parse_tcp_header(packet):
-   print("\t\tTCP Header:")
+   print("\t\t\033[96mTCP Header\033[0;0m:")
    
    tcp_header = packet[0][34:54]
    source_port, dest_port, seq_num, ack_num, offset_reserved_flags, window, checksum, urgent_pointer = unpack('!2s2s4s4s2s2s2s2s',tcp_header)
@@ -97,7 +97,7 @@ def parse_tcp_header(packet):
    
    
    
-   print(f"\t\tSource Port: {str(source_port)}    Destination Port: {str(dest_port)}")
+   print(f"\t\tSource Port:\033[91m {str(source_port)}\033[0;0m    Destination Port: \033[91m{str(dest_port)}\033[0;0m")
    print(f"\t\tSequence Number: {str(seq_num)}    Acknowledgement Number: {str(ack_num)}")
    print()
    print(f"\t\tURG flag: {str(flag_urg)}    ACK flag: {str(flag_ack)}    PSH flag: {str(flag_psh)}")
@@ -107,7 +107,7 @@ def parse_tcp_header(packet):
 
 
 def parse_icmp_header(packet):
-   print("\t\tICMP Header:")
+   print("\t\t\033[96mICMP Header\033[0;0m:")
    icmp_header = packet[0][34:38]
    icmp_type, code, checksum = unpack('!2s2s4s', icmp_header)
    
@@ -121,7 +121,7 @@ def parse_icmp_header(packet):
    
    
 def parse_udp_header(packet):
-   print("\t\tUDP Header:")
+   print("\t\t\033[96mUDP Header\033[0;0m:")
    udp_header = packet[0][34:42]
    source_port, dest_port, length, checksum = unpack('!2s2s2s2s', udp_header)
    
@@ -129,7 +129,7 @@ def parse_udp_header(packet):
    source_port = int(str(hexlify(source_port),'utf-8'),16)
    dest_port = int(str(hexlify(dest_port),'utf-8'),16)
    length = int(str(hexlify(length),'utf-8'),16)
-   
+   "\033[91m {}\033[00m" 
    print(f"\t\tSource Port: {str(source_port)}    Destination Port: {str(dest_port)}")
    print(f"\t\tLength: {str(length)}    Checksum: {str(hexlify(checksum),'utf-8')}")
    
@@ -144,20 +144,26 @@ def parse_rdp_header(packet):
 
 
 
-def print_tcp_data(packet):
-   tcp_data = packet[0][34:]
-   print("\t\tTCP data")
-   
-   try:
-      decoded_data = tcp_data.decode('utf-8')
-      print(f"\t\t\t{decoded_data}")
-   except:
-      print(f"\t\t\t{tcp_data}")
+def print_data(packet):
+   data = packet[0]
+   if (data):
+      print("\t\tData:")
+      data_hex = str(hexlify(data), 'utf-8')
+      for byte in (data_hex[i:i+2] for i in range(0, len(data_hex), 2)):
+         byte_in_decimal = int(byte, 16)
+         if byte_in_decimal < 127 and byte_in_decimal > 31:
+            byte_in_ascii = chr(byte_in_decimal)
+            print(byte_in_ascii, end="")
+         else:
+            print(".",end="")
+
    
    
 def main():
    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,  socket.ntohs(3))
+   i = 1
    while True:
+      print(f"\033[1mPacket {i}\033[0;0m:\n")
       packet = s.recvfrom(2048)
       
       #uses packet[0][0:14]
@@ -180,7 +186,7 @@ def main():
       if protocol == 6:
       	  #uses packet[0][34:54]
           parse_tcp_header(packet)
-          #TODO print out characters
+          
       #ICMP
       elif protocol == 1:
       	  #uses packet[0][34:38]
@@ -196,15 +202,11 @@ def main():
           #uses packet[0][34:
           parse_rdp_header(packet)
           
-         
+      print_data(packet) 
       print()
-
+      print()
+      i += 1;
    
    
 if __name__ == "__main__":
    main()
-   
-   
-   
-   
-   
