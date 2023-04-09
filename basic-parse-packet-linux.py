@@ -1,15 +1,15 @@
 import socket
+from sys import argv
 from struct import unpack
 from binascii import hexlify 
+
 
 #code to get value in decimal form
 #int(str(hexlify(VALUE_FROM_PACKET),'utf-8'),16)
    
    
 
-def parse_ethernet_header(packet):
-   print("\033[96mEthernet Header\033[0;0m:")
-   
+def parse_ethernet_header(packet):   
    ethernet_header = packet[0][0:14]
    eth_header = unpack("!6s 6s H", ethernet_header)
    
@@ -17,19 +17,20 @@ def parse_ethernet_header(packet):
    dest_mac = str(hexlify(eth_header[0], ':'), 'utf-8')
    eth_type = socket.htons(eth_header[2]) 
    
+   if "no-ethernet" not in argv:
    #prints dest_mac, source_mac, and type (IPv4 or IPv6)
-   print (f"Destination MAC: {dest_mac}    Source MAC: {source_mac}    Type: {eth_type}")
-   print()
+      print("\033[96mEthernet Header\033[0;0m:")
+      print (f"Destination MAC: {dest_mac}    Source MAC: {source_mac}    Type: {eth_type}")
+      print()
    #returns eth_type so it can correctly parse the type of packet
    return eth_type
    
    
    
 def parse_ip_header(packet):
-   print("\t\033[96mIP header\033[0;0m:")
    
    ipheader = packet[0][14:34]
-   version_plus_header_len, TOS, total_len, identification, flag_plus_offset, TTL, protocol, header_checksum, source_ip, dest_ip = unpack("!1s1s2s2s2s1s1s2s4s4s", ipheader)
+   version_plus_header_len, TOS, total_len, identification, flag_plus_offset, TTL, protocol, header_checksum, source_ip, dest_ip = unpack("!1s 1s 2s 2s 2s 1s 1s 2s 4s 4s", ipheader)
    
    #gets version and header length seperate 
    version_plus_header_len = str(hexlify(version_plus_header_len), 'utf-8')
@@ -47,27 +48,30 @@ def parse_ip_header(packet):
    protocol = int(str(hexlify(protocol),'utf-8'),16)
    
    
+   #checks if flag is there
+   if "no-ip" not in argv:
    #prints all of the values
-   print(f"\tVersion: {version}     Header length: {int(header_len)*4} bytes    Type of Service: {str(hexlify(TOS), 'utf-8')}") 
-   print(f"\tTotal Length {int(str(hexlify(total_len),'utf-8'),16)}    Identification: 0x{str(hexlify(identification),'utf-8')}")
-   print(f"\tReserved Bit: {flags[0]}  Don't Fragment: {flags[1]}  More Fragment: {flags[2]}") 
-   print(f"\tOffset: {offset}    Time to Live: {int(str(hexlify(TTL), 'utf-8'),16)}")
-   print(f"\tHeader Checksum: {str(hexlify(header_checksum), 'utf-8')}")
-   print()
+      print("\t\033[96mIP header\033[0;0m:")
+      print(f"\tVersion: {version}     Header length: {int(header_len)*4} bytes    Type of Service: {str(hexlify(TOS), 'utf-8')}") 
+      print(f"\tTotal Length {int(str(hexlify(total_len),'utf-8'),16)}    Identification: 0x{str(hexlify(identification),'utf-8')}")
+      print(f"\tReserved Bit: {flags[0]}  Don't Fragment: {flags[1]}  More Fragment: {flags[2]}") 
+      print(f"\tOffset: {offset}    Time to Live: {int(str(hexlify(TTL), 'utf-8'),16)}")
+      print(f"\tHeader Checksum: {str(hexlify(header_checksum), 'utf-8')}")
+      print()
    #figures out the protocol
-   if protocol == 6:
-      print(f"\tProtocol: \033[1mTCP\033[0;0m ({protocol})")
-   elif protocol == 1:
-      print(f"\tProtocol: \033[1mICMP\033[0;0m ({protocol})")
-   elif protocol == 17:
-      print(f"\tProtocol: \033[1mUDP\033[0;0m ({protocol})")
-   elif protocol == 27:
-      print(f"\tProtocol: \033[1mRDP\033[0;0m ({protocol})")
-   else:
-      print(f"\tProtocol: {protocol} (Unknown)")
-   print()
-   print(f"\tSource IP: {socket.inet_ntoa(source_ip)}    Destination IP: {socket.inet_ntoa(dest_ip)}")
-   print()
+      if protocol == 6:
+         print(f"\tProtocol: \033[1mTCP\033[0;0m ({protocol})")
+      elif protocol == 1:
+         print(f"\tProtocol: \033[1mICMP\033[0;0m ({protocol})")
+      elif protocol == 17:
+         print(f"\tProtocol: \033[1mUDP\033[0;0m ({protocol})")
+      elif protocol == 27:
+         print(f"\tProtocol: \033[1mRDP\033[0;0m ({protocol})")
+      else:
+         print(f"\tProtocol: {protocol} (Unknown)")
+      print()
+      print(f"\tSource IP: {socket.inet_ntoa(source_ip)}    Destination IP: {socket.inet_ntoa(dest_ip)}")
+      print()
    
    return protocol
 
@@ -76,7 +80,7 @@ def parse_tcp_header(packet):
    print("\t\t\033[96mTCP Header\033[0;0m:")
    
    tcp_header = packet[0][34:54]
-   source_port, dest_port, seq_num, ack_num, offset_reserved_flags, window, checksum, urgent_pointer = unpack('!2s2s4s4s2s2s2s2s',tcp_header)
+   source_port, dest_port, seq_num, ack_num, offset_reserved_flags, window, checksum, urgent_pointer = unpack('!2s 2s 4s 4s 2s 2s 2s 2s',tcp_header)
    
    #gets values in decimal form
    source_port = int(str(hexlify(source_port),'utf-8'),16)
@@ -108,8 +112,8 @@ def parse_tcp_header(packet):
 
 def parse_icmp_header(packet):
    print("\t\t\033[96mICMP Header\033[0;0m:")
-   icmp_header = packet[0][34:38]
-   icmp_type, code, checksum = unpack('!2s2s4s', icmp_header)
+   icmp_header = packet[0][34:42]
+   icmp_type, code, checksum = unpack('!2s 2s 4s', icmp_header)
    
    #gets decimal values
    icmp_type = int(str(hexlify(icmp_type),'utf-8'),16)
@@ -123,7 +127,7 @@ def parse_icmp_header(packet):
 def parse_udp_header(packet):
    print("\t\t\033[96mUDP Header\033[0;0m:")
    udp_header = packet[0][34:42]
-   source_port, dest_port, length, checksum = unpack('!2s2s2s2s', udp_header)
+   source_port, dest_port, length, checksum = unpack('!2s 2s 2s 2s', udp_header)
    
    #get decimal values
    source_port = int(str(hexlify(source_port),'utf-8'),16)
@@ -160,8 +164,30 @@ def print_data(packet):
    
    
 def main():
-   s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,  socket.ntohs(3))
-   i = 1
+
+
+   #help command
+   if "help" in argv:
+      print("USAGE:")
+      print(f" \"sudo python3 {argv[0]} FLAGS\"\n") 
+      print("   FLAGS:")
+      print("\t\"no-ethernet\"  -  does not show the ethernet header")
+      print("\t\"no-ip\"        -  does not show the ip header")
+      print("\t\"no-tcp\"       -  does not show the tcp header")
+      print("\t\"no-icmp\"      -  does not show the icmp header")
+      print("\t\"no-udp\"       -  does not show the udp header")
+      print("\t\"no-data\"      -  does not show data")
+      print()
+      exit(1)
+      
+   #tries to create socket, if it cannot then it points them to help command   
+   try:
+      s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW,  socket.ntohs(3))
+      i = 1
+   except:
+      print("Run command with \"help\" in order to see usage and flags\n")
+      exit(1)
+      
    while True:
       print(f"\033[1mPacket {i}\033[0;0m:\n")
       packet = s.recvfrom(2048)
@@ -184,25 +210,34 @@ def main():
          
       #TCP   
       if protocol == 6:
-      	  #uses packet[0][34:54]
-          parse_tcp_header(packet)
+         if "no-tcp" not in argv:
+      	 #uses packet[0][34:54]
+            parse_tcp_header(packet)
           
       #ICMP
       elif protocol == 1:
-      	  #uses packet[0][34:38]
-          parse_icmp_header(packet)
+         if "no-icmp" not in argv:
+      	 #uses packet[0][34:42]
+            parse_icmp_header(packet)
           
       #UDP
       elif protocol == 17:
-          #uses packet[0][34:42]
-          parse_udp_header(packet)
+         if "no-udp" not in argv:
+         #uses packet[0][34:42]
+            parse_udp_header(packet)
           
       #RDP
       elif protocol == 27:
-          #uses packet[0][34:
-          parse_rdp_header(packet)
-          
-      print_data(packet) 
+         #uses packet[0][34:
+         parse_rdp_header(packet)
+      else:
+         continue    
+      
+      #checks flags
+      if "no-data" not in argv:    
+      	print_data(packet) 
+      	
+      	
       print()
       print()
       i += 1;
