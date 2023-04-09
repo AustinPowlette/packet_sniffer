@@ -201,7 +201,7 @@ def main():
          protocol = parse_ip_header(packet)
          
       #if IPv6
-      elif eth_type == 0x86DD:
+      elif eth_type == 56710:
          print("IPv6 is not implemented yet")
          continue
       	 
@@ -235,7 +235,7 @@ def main():
       
       #checks flags
       if "no-data" not in argv:    
-      	print_data(packet) 
+         print_data(packet) 
       	
       	
       print()
